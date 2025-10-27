@@ -1,0 +1,78 @@
+# Build Folders
+bin/
+obj/
+out/
+Debug/
+Release/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vscode/
+
+# Logs
+*.log
+
+# Visual Studio cache/options
+.vs/
+
+# ASP.NET Core secret settings
+secrets.json
+appsettings.*.local.json
+appsettings.Development.json
+
+# NuGet Packages
+*.nupkg
+# Ignore package restore folder
+packages/
+*.snupkg
+
+# Temporary files
+*.tmp
+*.temp
+
+# Publish output
+publish/
+*.Publish.xml
+
+# Other IDE folders
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Rider
+.idea/
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.dbmdl
+*.bak
+*.mdf
+*.ldf
+
+# Environment
+.env
+
+# Compiled DLLs
+*.dll
+*.exe
+*.pdb
+
+# Backup & test output
+TestResults/
+*.coverage
+*.coveragexml
+
+# node / front-end (if you later add UI)
+node_modules/
+dist/
