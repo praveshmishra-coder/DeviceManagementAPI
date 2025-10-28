@@ -1,64 +1,82 @@
-﻿using System.Data.SqlClient;
+﻿using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.Models;
-using Microsoft.Extensions.Configuration;
-using DeviceManagementAPI.Data.Interfaces;
+using System.Collections.Generic;
+using Microsoft.Data.SqlClient;
 
 namespace DeviceManagementAPI.Data
 {
     public class DeviceRepository : IDeviceRepository
     {
-        private readonly string _connectionString;
-        public DeviceRepository(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
-        }
+        private readonly DatabaseHelper _db;
+        public DeviceRepository(DatabaseHelper db) => _db = db;
 
-        public List<Device> GetAllDevices()
+        public IEnumerable<Device> GetAllDevices()
         {
-            List<Device> devices = new();
-            using SqlConnection con = new(_connectionString);
-            SqlCommand cmd = new("SELECT * FROM Devices", con);
+            var list = new List<Device>();
+            using var con = _db.GetConnection();
             con.Open();
-            SqlDataReader reader = cmd.ExecuteReader();
+            using var cmd = new SqlCommand("SELECT * FROM Devices", con);
+            using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
-                devices.Add(new Device
+                list.Add(new Device
                 {
                     DeviceId = (int)reader["DeviceId"],
-                    Name = reader["Name"].ToString(),
+                    DeviceName = reader["Name"].ToString(),   // fixed column name
                     Description = reader["Description"].ToString()
                 });
             }
-            return devices;
+            return list;
+        }
+
+        public Device GetDeviceById(int deviceId)
+        {
+            using var con = _db.GetConnection();
+            con.Open();
+            using var cmd = new SqlCommand("SELECT * FROM Devices WHERE DeviceId=@DeviceId", con);
+            cmd.Parameters.AddWithValue("@DeviceId", deviceId);
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                return new Device
+                {
+                    DeviceId = (int)reader["DeviceId"],
+                    DeviceName = reader["Name"].ToString(),  // fixed column name
+                    Description = reader["Description"].ToString()
+                };
+            }
+            return null;
         }
 
         public void AddDevice(Device device)
         {
-            using SqlConnection con = new(_connectionString);
-            SqlCommand cmd = new("INSERT INTO Devices (Name, Description) VALUES (@Name, @Description)", con);
-            cmd.Parameters.AddWithValue("@Name", device.Name);
-            cmd.Parameters.AddWithValue("@Description", device.Description);
+            using var con = _db.GetConnection();
             con.Open();
+            using var cmd = new SqlCommand(
+                "INSERT INTO Devices (Name, Description) VALUES (@Name, @Description)", con);
+            cmd.Parameters.AddWithValue("@Name", device.DeviceName);
+            cmd.Parameters.AddWithValue("@Description", device.Description);
             cmd.ExecuteNonQuery();
         }
 
         public void UpdateDevice(Device device)
         {
-            using SqlConnection con = new(_connectionString);
-            SqlCommand cmd = new("UPDATE Devices SET Name=@Name, Description=@Description WHERE DeviceId=@DeviceId", con);
-            cmd.Parameters.AddWithValue("@DeviceId", device.DeviceId);
-            cmd.Parameters.AddWithValue("@Name", device.Name);
-            cmd.Parameters.AddWithValue("@Description", device.Description);
+            using var con = _db.GetConnection();
             con.Open();
+            using var cmd = new SqlCommand(
+                "UPDATE Devices SET Name=@Name, Description=@Description WHERE DeviceId=@DeviceId", con);
+            cmd.Parameters.AddWithValue("@Name", device.DeviceName);
+            cmd.Parameters.AddWithValue("@Description", device.Description);
+            cmd.Parameters.AddWithValue("@DeviceId", device.DeviceId);
             cmd.ExecuteNonQuery();
         }
 
         public void DeleteDevice(int deviceId)
         {
-            using SqlConnection con = new(_connectionString);
-            SqlCommand cmd = new("DELETE FROM Devices WHERE DeviceId=@DeviceId", con);
-            cmd.Parameters.AddWithValue("@DeviceId", deviceId);
+            using var con = _db.GetConnection();
             con.Open();
+            using var cmd = new SqlCommand("DELETE FROM Devices WHERE DeviceId=@DeviceId", con);
+            cmd.Parameters.AddWithValue("@DeviceId", deviceId);
             cmd.ExecuteNonQuery();
         }
     }

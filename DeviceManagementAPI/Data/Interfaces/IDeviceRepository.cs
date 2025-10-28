@@ -5,7 +5,8 @@ namespace DeviceManagementAPI.Data.Interfaces
 {
     public interface IDeviceRepository
     {
-        List<Device> GetAllDevices();
+        IEnumerable<Device> GetAllDevices();
+        Device GetDeviceById(int deviceId);
         void AddDevice(Device device);
         void UpdateDevice(Device device);
         void DeleteDevice(int deviceId);

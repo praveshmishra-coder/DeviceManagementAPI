@@ -5,7 +5,8 @@ namespace DeviceManagementAPI.Data.Interfaces
 {
     public interface IAssetRepository
     {
-        List<Asset> GetAllAssets();
+        IEnumerable<Asset> GetAllAssets();
+        Asset GetAssetById(int assetId);
         void AddAsset(Asset asset);
         void UpdateAsset(Asset asset);
         void DeleteAsset(int assetId);

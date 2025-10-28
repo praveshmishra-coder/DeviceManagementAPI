@@ -5,7 +5,8 @@ namespace DeviceManagementAPI.Data.Interfaces
 {
     public interface ISignalMeasurementRepository
     {
-        List<SignalMeasurement> GetAllSignals();
+        IEnumerable<SignalMeasurement> GetAllSignals();
+        SignalMeasurement GetSignalById(int signalId);
         void AddSignal(SignalMeasurement signal);
         void UpdateSignal(SignalMeasurement signal);
         void DeleteSignal(int signalId);

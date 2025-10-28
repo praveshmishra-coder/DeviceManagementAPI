@@ -1,64 +1,81 @@
-﻿using System.Data.SqlClient;
+﻿using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.Models;
-using Microsoft.Extensions.Configuration;
-using DeviceManagementAPI.Data.Interfaces;
+using System.Collections.Generic;
+using Microsoft.Data.SqlClient;
 
 namespace DeviceManagementAPI.Data
 {
     public class AssetRepository : IAssetRepository
     {
-        private readonly string _connectionString;
-        public AssetRepository(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
-        }
+        private readonly DatabaseHelper _db;
+        public AssetRepository(DatabaseHelper db) => _db = db;
 
-        public List<Asset> GetAllAssets()
+        public IEnumerable<Asset> GetAllAssets()
         {
-            List<Asset> assets = new();
-            using SqlConnection con = new(_connectionString);
-            SqlCommand cmd = new("SELECT * FROM Assets", con);
+            var list = new List<Asset>();
+            using var con = _db.GetConnection();
             con.Open();
-            SqlDataReader reader = cmd.ExecuteReader();
+            using var cmd = new SqlCommand("SELECT * FROM Assets", con);
+            using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
-                assets.Add(new Asset
+                list.Add(new Asset
                 {
                     AssetId = (int)reader["AssetId"],
                     DeviceId = (int)reader["DeviceId"],
                     AssetName = reader["AssetName"].ToString()
                 });
             }
-            return assets;
+            return list;
+        }
+
+        public Asset GetAssetById(int assetId)
+        {
+            using var con = _db.GetConnection();
+            con.Open();
+            using var cmd = new SqlCommand("SELECT * FROM Assets WHERE AssetId=@AssetId", con);
+            cmd.Parameters.AddWithValue("@AssetId", assetId);
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                return new Asset
+                {
+                    AssetId = (int)reader["AssetId"],
+                    DeviceId = (int)reader["DeviceId"],
+                    AssetName = reader["AssetName"].ToString()
+                };
+            }
+            return null;
         }
 
         public void AddAsset(Asset asset)
         {
-            using SqlConnection con = new(_connectionString);
-            SqlCommand cmd = new("INSERT INTO Assets (DeviceId, AssetName) VALUES (@DeviceId, @AssetName)", con);
+            using var con = _db.GetConnection();
+            con.Open();
+            using var cmd = new SqlCommand("INSERT INTO Assets (DeviceId, AssetName) VALUES (@DeviceId, @AssetName)", con);
             cmd.Parameters.AddWithValue("@DeviceId", asset.DeviceId);
             cmd.Parameters.AddWithValue("@AssetName", asset.AssetName);
-            con.Open();
             cmd.ExecuteNonQuery();
         }
 
         public void UpdateAsset(Asset asset)
         {
-            using SqlConnection con = new(_connectionString);
-            SqlCommand cmd = new("UPDATE Assets SET DeviceId=@DeviceId, AssetName=@AssetName WHERE AssetId=@AssetId", con);
-            cmd.Parameters.AddWithValue("@AssetId", asset.AssetId);
+            using var con = _db.GetConnection();
+            con.Open();
+            using var cmd = new SqlCommand(
+                "UPDATE Assets SET DeviceId=@DeviceId, AssetName=@AssetName WHERE AssetId=@AssetId", con);
             cmd.Parameters.AddWithValue("@DeviceId", asset.DeviceId);
             cmd.Parameters.AddWithValue("@AssetName", asset.AssetName);
-            con.Open();
+            cmd.Parameters.AddWithValue("@AssetId", asset.AssetId);
             cmd.ExecuteNonQuery();
         }
 
         public void DeleteAsset(int assetId)
         {
-            using SqlConnection con = new(_connectionString);
-            SqlCommand cmd = new("DELETE FROM Assets WHERE AssetId=@AssetId", con);
-            cmd.Parameters.AddWithValue("@AssetId", assetId);
+            using var con = _db.GetConnection();
             con.Open();
+            using var cmd = new SqlCommand("DELETE FROM Assets WHERE AssetId=@AssetId", con);
+            cmd.Parameters.AddWithValue("@AssetId", assetId);
             cmd.ExecuteNonQuery();
         }
     }
