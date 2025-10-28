@@ -1,41 +1,59 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using DeviceManagementAPI.Data.Interfaces;
+﻿using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DeviceManagementAPI.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     public class DeviceController : ControllerBase
     {
-        private readonly IDeviceRepository _repo;
-        public DeviceController(IDeviceRepository repo)
+        private readonly IDeviceRepository _repository;
+
+        public DeviceController(IDeviceRepository repository)
         {
-            _repo = repo;
+            _repository = repository;
         }
 
         [HttpGet]
-        public IActionResult GetDevices() => Ok(_repo.GetAllDevices());
-
-        [HttpPost]
-        public IActionResult AddDevice(Device device)
+        public async Task<IActionResult> GetAll()
         {
-            _repo.AddDevice(device);
-            return Ok("Device Added Successfully");
+            var devices = await _repository.GetAllDevicesAsync();
+            return Ok(devices);
         }
 
-        [HttpPut]
-        public IActionResult UpdateDevice(Device device)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
         {
-            _repo.UpdateDevice(device);
-            return Ok("Device Updated Successfully");
+            var device = await _repository.GetDeviceByIdAsync(id);
+            if (device == null)
+                return NotFound();
+
+            return Ok(device);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create(Device device)
+        {
+            var newId = await _repository.AddDeviceAsync(device);
+            return CreatedAtAction(nameof(GetById), new { id = newId }, device);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, Device device)
+        {
+            if (id != device.DeviceId)
+                return BadRequest("Device ID mismatch.");
+
+            await _repository.UpdateDeviceAsync(device);
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteDevice(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            _repo.DeleteDevice(id);
-            return Ok("Device Deleted Successfully");
+            await _repository.DeleteDeviceAsync(id);
+            return NoContent();
         }
     }
 }

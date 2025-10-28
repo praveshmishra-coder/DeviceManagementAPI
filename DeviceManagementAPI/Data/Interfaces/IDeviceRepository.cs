@@ -1,14 +1,13 @@
 ﻿using DeviceManagementAPI.Models;
-using System.Collections.Generic;
 
 namespace DeviceManagementAPI.Data.Interfaces
 {
     public interface IDeviceRepository
     {
-        IEnumerable<Device> GetAllDevices();
-        Device GetDeviceById(int deviceId);
-        void AddDevice(Device device);
-        void UpdateDevice(Device device);
-        void DeleteDevice(int deviceId);
+        Task<IEnumerable<Device>> GetAllDevicesAsync();
+        Task<Device?> GetDeviceByIdAsync(int deviceId);
+        Task<int> AddDeviceAsync(Device device);
+        Task UpdateDeviceAsync(Device device);
+        Task DeleteDeviceAsync(int deviceId);
     }
 }

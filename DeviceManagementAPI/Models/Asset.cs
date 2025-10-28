@@ -4,6 +4,6 @@
     {
         public int AssetId { get; set; }
         public int DeviceId { get; set; }
-        public string AssetName { get; set; }
+        public string AssetName { get; set; } = string.Empty;
     }
 }

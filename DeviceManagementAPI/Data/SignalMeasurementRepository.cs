@@ -1,87 +1,116 @@
 ﻿using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.Models;
-using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
+using System.Data;
 
 namespace DeviceManagementAPI.Data
 {
     public class SignalMeasurementRepository : ISignalMeasurementRepository
     {
         private readonly DatabaseHelper _db;
-        public SignalMeasurementRepository(DatabaseHelper db) => _db = db;
 
-        public IEnumerable<SignalMeasurement> GetAllSignals()
+        public SignalMeasurementRepository(DatabaseHelper db)
         {
-            var list = new List<SignalMeasurement>();
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand("SELECT * FROM SignalMeasurements", con);
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                list.Add(new SignalMeasurement
-                {
-                    SignalId = (int)reader["SignalId"],
-                    AssetId = (int)reader["AssetId"],
-                    SignalTag = reader["SignalTag"].ToString(),
-                    RegisterAddress = reader["RegisterAddress"].ToString()
-                });
-            }
-            return list;
+            _db = db;
         }
 
-        public SignalMeasurement GetSignalById(int signalId)
+        public async Task<IEnumerable<SignalMeasurement>> GetAllSignalsAsync()
         {
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand("SELECT * FROM SignalMeasurements WHERE SignalId=@SignalId", con);
-            cmd.Parameters.AddWithValue("@SignalId", signalId);
-            using var reader = cmd.ExecuteReader();
-            if (reader.Read())
+            var signals = new List<SignalMeasurement>();
+
+            await using var con = _db.GetConnection();
+            await con.OpenAsync();
+
+            const string query = "SELECT SignalId, AssetId, SignalTag, RegisterAddress FROM SignalMeasurements";
+            await using var cmd = new SqlCommand(query, con);
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                signals.Add(new SignalMeasurement
+                {
+                    SignalId = reader.GetInt32(reader.GetOrdinal("SignalId")),
+                    AssetId = reader.GetInt32(reader.GetOrdinal("AssetId")),
+                    SignalTag = reader["SignalTag"].ToString() ?? string.Empty,
+                    RegisterAddress = reader["RegisterAddress"].ToString() ?? string.Empty
+                });
+            }
+
+            return signals;
+        }
+
+        public async Task<SignalMeasurement?> GetSignalByIdAsync(int signalId)
+        {
+            await using var con = _db.GetConnection();
+            await con.OpenAsync();
+
+            const string query = "SELECT SignalId, AssetId, SignalTag, RegisterAddress FROM SignalMeasurements WHERE SignalId=@SignalId";
+            await using var cmd = new SqlCommand(query, con);
+            cmd.Parameters.Add("@SignalId", SqlDbType.Int).Value = signalId;
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
             {
                 return new SignalMeasurement
                 {
-                    SignalId = (int)reader["SignalId"],
-                    AssetId = (int)reader["AssetId"],
-                    SignalTag = reader["SignalTag"].ToString(),
-                    RegisterAddress = reader["RegisterAddress"].ToString()
+                    SignalId = reader.GetInt32(reader.GetOrdinal("SignalId")),
+                    AssetId = reader.GetInt32(reader.GetOrdinal("AssetId")),
+                    SignalTag = reader["SignalTag"].ToString() ?? string.Empty,
+                    RegisterAddress = reader["RegisterAddress"].ToString() ?? string.Empty
                 };
             }
+
             return null;
         }
 
-        public void AddSignal(SignalMeasurement signal)
+        public async Task<int> AddSignalAsync(SignalMeasurement signal)
         {
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand(
-                "INSERT INTO SignalMeasurements (AssetId, SignalTag, RegisterAddress) VALUES (@AssetId, @SignalTag, @RegisterAddress)", con);
-            cmd.Parameters.AddWithValue("@AssetId", signal.AssetId);
-            cmd.Parameters.AddWithValue("@SignalTag", signal.SignalTag);
-            cmd.Parameters.AddWithValue("@RegisterAddress", signal.RegisterAddress);
-            cmd.ExecuteNonQuery();
+            await using var con = _db.GetConnection();
+            await con.OpenAsync();
+
+            const string query = @"
+                INSERT INTO SignalMeasurements (AssetId, SignalTag, RegisterAddress)
+                VALUES (@AssetId, @SignalTag, @RegisterAddress);
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            await using var cmd = new SqlCommand(query, con);
+            cmd.Parameters.Add("@AssetId", SqlDbType.Int).Value = signal.AssetId;
+            cmd.Parameters.Add("@SignalTag", SqlDbType.NVarChar, 200).Value = signal.SignalTag ?? (object)DBNull.Value;
+            cmd.Parameters.Add("@RegisterAddress", SqlDbType.NVarChar, 200).Value = signal.RegisterAddress ?? (object)DBNull.Value;
+
+            var newId = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(newId);
         }
 
-        public void UpdateSignal(SignalMeasurement signal)
+        public async Task UpdateSignalAsync(SignalMeasurement signal)
         {
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand(
-                "UPDATE SignalMeasurements SET AssetId=@AssetId, SignalTag=@SignalTag, RegisterAddress=@RegisterAddress WHERE SignalId=@SignalId", con);
-            cmd.Parameters.AddWithValue("@SignalId", signal.SignalId);
-            cmd.Parameters.AddWithValue("@AssetId", signal.AssetId);
-            cmd.Parameters.AddWithValue("@SignalTag", signal.SignalTag);
-            cmd.Parameters.AddWithValue("@RegisterAddress", signal.RegisterAddress);
-            cmd.ExecuteNonQuery();
+            await using var con = _db.GetConnection();
+            await con.OpenAsync();
+
+            const string query = @"
+                UPDATE SignalMeasurements
+                SET AssetId=@AssetId, SignalTag=@SignalTag, RegisterAddress=@RegisterAddress
+                WHERE SignalId=@SignalId";
+
+            await using var cmd = new SqlCommand(query, con);
+            cmd.Parameters.Add("@SignalId", SqlDbType.Int).Value = signal.SignalId;
+            cmd.Parameters.Add("@AssetId", SqlDbType.Int).Value = signal.AssetId;
+            cmd.Parameters.Add("@SignalTag", SqlDbType.NVarChar, 200).Value = signal.SignalTag ?? (object)DBNull.Value;
+            cmd.Parameters.Add("@RegisterAddress", SqlDbType.NVarChar, 200).Value = signal.RegisterAddress ?? (object)DBNull.Value;
+
+            await cmd.ExecuteNonQueryAsync();
         }
 
-        public void DeleteSignal(int signalId)
+        public async Task DeleteSignalAsync(int signalId)
         {
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand("DELETE FROM SignalMeasurements WHERE SignalId=@SignalId", con);
-            cmd.Parameters.AddWithValue("@SignalId", signalId);
-            cmd.ExecuteNonQuery();
+            await using var con = _db.GetConnection();
+            await con.OpenAsync();
+
+            const string query = "DELETE FROM SignalMeasurements WHERE SignalId=@SignalId";
+            await using var cmd = new SqlCommand(query, con);
+            cmd.Parameters.Add("@SignalId", SqlDbType.Int).Value = signalId;
+
+            await cmd.ExecuteNonQueryAsync();
         }
     }
 }

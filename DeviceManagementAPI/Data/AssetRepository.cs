@@ -1,82 +1,109 @@
-﻿using DeviceManagementAPI.Data.Interfaces;
-using DeviceManagementAPI.Models;
-using System.Collections.Generic;
+﻿using System.Data;
 using Microsoft.Data.SqlClient;
+using DeviceManagementAPI.Models;
+using DeviceManagementAPI.Data.Interfaces;
 
 namespace DeviceManagementAPI.Data
 {
     public class AssetRepository : IAssetRepository
     {
-        private readonly DatabaseHelper _db;
-        public AssetRepository(DatabaseHelper db) => _db = db;
+        private readonly string _connectionString;
 
-        public IEnumerable<Asset> GetAllAssets()
+        public AssetRepository(IConfiguration configuration)
         {
-            var list = new List<Asset>();
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand("SELECT * FROM Assets", con);
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                list.Add(new Asset
-                {
-                    AssetId = (int)reader["AssetId"],
-                    DeviceId = (int)reader["DeviceId"],
-                    AssetName = reader["AssetName"].ToString()
-                });
-            }
-            return list;
+            _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
-        public Asset GetAssetById(int assetId)
+        public async Task<IEnumerable<Asset>> GetAllAssetsAsync()
         {
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand("SELECT * FROM Assets WHERE AssetId=@AssetId", con);
-            cmd.Parameters.AddWithValue("@AssetId", assetId);
-            using var reader = cmd.ExecuteReader();
-            if (reader.Read())
+            var assets = new List<Asset>();
+
+            using (var conn = new SqlConnection(_connectionString))
+            using (var cmd = new SqlCommand("SELECT AssetId, DeviceId, AssetName FROM Assets", conn))
             {
-                return new Asset
+                await conn.OpenAsync();
+                using (var reader = await cmd.ExecuteReaderAsync())
                 {
-                    AssetId = (int)reader["AssetId"],
-                    DeviceId = (int)reader["DeviceId"],
-                    AssetName = reader["AssetName"].ToString()
-                };
+                    while (await reader.ReadAsync())
+                    {
+                        assets.Add(new Asset
+                        {
+                            AssetId = reader.GetInt32(reader.GetOrdinal("AssetId")),
+                            DeviceId = reader.GetInt32(reader.GetOrdinal("DeviceId")),
+                            AssetName = reader["AssetName"]?.ToString() ?? string.Empty
+                        });
+                    }
+                }
             }
+
+            return assets;
+        }
+
+        public async Task<Asset?> GetAssetByIdAsync(int assetId)
+        {
+            using (var conn = new SqlConnection(_connectionString))
+            using (var cmd = new SqlCommand("SELECT AssetId, DeviceId, AssetName FROM Assets WHERE AssetId=@AssetId", conn))
+            {
+                cmd.Parameters.Add("@AssetId", SqlDbType.Int).Value = assetId;
+
+                await conn.OpenAsync();
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        return new Asset
+                        {
+                            AssetId = reader.GetInt32(reader.GetOrdinal("AssetId")),
+                            DeviceId = reader.GetInt32(reader.GetOrdinal("DeviceId")),
+                            AssetName = reader["AssetName"]?.ToString() ?? string.Empty
+                        };
+                    }
+                }
+            }
+
             return null;
         }
 
-        public void AddAsset(Asset asset)
+        public async Task<int> AddAssetAsync(Asset asset)
         {
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand("INSERT INTO Assets (DeviceId, AssetName) VALUES (@DeviceId, @AssetName)", con);
-            cmd.Parameters.AddWithValue("@DeviceId", asset.DeviceId);
-            cmd.Parameters.AddWithValue("@AssetName", asset.AssetName);
-            cmd.ExecuteNonQuery();
+            using (var conn = new SqlConnection(_connectionString))
+            using (var cmd = new SqlCommand(
+                "INSERT INTO Assets (DeviceId, AssetName) OUTPUT INSERTED.AssetId VALUES (@DeviceId, @AssetName)", conn))
+            {
+                cmd.Parameters.Add("@DeviceId", SqlDbType.Int).Value = asset.DeviceId;
+                cmd.Parameters.Add("@AssetName", SqlDbType.NVarChar, 200).Value = asset.AssetName ?? (object)DBNull.Value;
+
+                await conn.OpenAsync();
+                var newId = (int)await cmd.ExecuteScalarAsync();
+                return newId;
+            }
         }
 
-        public void UpdateAsset(Asset asset)
+        public async Task UpdateAssetAsync(Asset asset)
         {
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand(
-                "UPDATE Assets SET DeviceId=@DeviceId, AssetName=@AssetName WHERE AssetId=@AssetId", con);
-            cmd.Parameters.AddWithValue("@DeviceId", asset.DeviceId);
-            cmd.Parameters.AddWithValue("@AssetName", asset.AssetName);
-            cmd.Parameters.AddWithValue("@AssetId", asset.AssetId);
-            cmd.ExecuteNonQuery();
+            using (var conn = new SqlConnection(_connectionString))
+            using (var cmd = new SqlCommand(
+                "UPDATE Assets SET DeviceId=@DeviceId, AssetName=@AssetName WHERE AssetId=@AssetId", conn))
+            {
+                cmd.Parameters.Add("@AssetId", SqlDbType.Int).Value = asset.AssetId;
+                cmd.Parameters.Add("@DeviceId", SqlDbType.Int).Value = asset.DeviceId;
+                cmd.Parameters.Add("@AssetName", SqlDbType.NVarChar, 200).Value = asset.AssetName ?? (object)DBNull.Value;
+
+                await conn.OpenAsync();
+                await cmd.ExecuteNonQueryAsync();
+            }
         }
 
-        public void DeleteAsset(int assetId)
+        public async Task DeleteAssetAsync(int id)
         {
-            using var con = _db.GetConnection();
-            con.Open();
-            using var cmd = new SqlCommand("DELETE FROM Assets WHERE AssetId=@AssetId", con);
-            cmd.Parameters.AddWithValue("@AssetId", assetId);
-            cmd.ExecuteNonQuery();
+            using (var conn = new SqlConnection(_connectionString))
+            using (var cmd = new SqlCommand("DELETE FROM Assets WHERE AssetId=@AssetId", conn))
+            {
+                cmd.Parameters.Add("@AssetId", SqlDbType.Int).Value = id;
+
+                await conn.OpenAsync();
+                await cmd.ExecuteNonQueryAsync();
+            }
         }
     }
 }

@@ -1,41 +1,59 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using DeviceManagementAPI.Data.Interfaces;
+﻿using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DeviceManagementAPI.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     public class SignalMeasurementController : ControllerBase
     {
-        private readonly ISignalMeasurementRepository _repo;
-        public SignalMeasurementController(ISignalMeasurementRepository repo)
+        private readonly ISignalMeasurementRepository _repository;
+
+        public SignalMeasurementController(ISignalMeasurementRepository repository)
         {
-            _repo = repo;
+            _repository = repository;
         }
 
         [HttpGet]
-        public IActionResult GetSignals() => Ok(_repo.GetAllSignals());
-
-        [HttpPost]
-        public IActionResult AddSignal(SignalMeasurement signal)
+        public async Task<IActionResult> GetAll()
         {
-            _repo.AddSignal(signal);
-            return Ok("Signal Added Successfully");
+            var signals = await _repository.GetAllSignalsAsync();
+            return Ok(signals);
         }
 
-        [HttpPut]
-        public IActionResult UpdateSignal(SignalMeasurement signal)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
         {
-            _repo.UpdateSignal(signal);
-            return Ok("Signal Updated Successfully");
+            var signal = await _repository.GetSignalByIdAsync(id);
+            if (signal == null)
+                return NotFound();
+
+            return Ok(signal);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create(SignalMeasurement signal)
+        {
+            var newId = await _repository.AddSignalAsync(signal);
+            return CreatedAtAction(nameof(GetById), new { id = newId }, signal);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, SignalMeasurement signal)
+        {
+            if (id != signal.SignalId)
+                return BadRequest("Signal ID mismatch.");
+
+            await _repository.UpdateSignalAsync(signal);
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteSignal(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            _repo.DeleteSignal(id);
-            return Ok("Signal Deleted Successfully");
+            await _repository.DeleteSignalAsync(id);
+            return NoContent();
         }
     }
 }
