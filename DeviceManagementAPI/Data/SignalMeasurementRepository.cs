@@ -1,14 +1,13 @@
-﻿using System.Data;
-using System.Data.SqlClient;
+﻿using System.Data.SqlClient;
 using DeviceManagementAPI.Models;
 using Microsoft.Extensions.Configuration;
+using DeviceManagementAPI.Data.Interfaces;
 
 namespace DeviceManagementAPI.Data
 {
-    public class SignalMeasurementRepository
+    public class SignalMeasurementRepository : ISignalMeasurementRepository
     {
         private readonly string _connectionString;
-
         public SignalMeasurementRepository(IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");

@@ -1,15 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using DeviceManagementAPI.Data;
+using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.Models;
 
 namespace DeviceManagementAPI.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class DeviceController : ControllerBase
     {
-        private readonly DeviceRepository _repo;
-        public DeviceController(DeviceRepository repo)
+        private readonly IDeviceRepository _repo;
+        public DeviceController(IDeviceRepository repo)
         {
             _repo = repo;
         }
@@ -21,21 +21,21 @@ namespace DeviceManagementAPI.Controllers
         public IActionResult AddDevice(Device device)
         {
             _repo.AddDevice(device);
-            return Ok("Device Added");
+            return Ok("Device Added Successfully");
         }
 
         [HttpPut]
         public IActionResult UpdateDevice(Device device)
         {
             _repo.UpdateDevice(device);
-            return Ok("Device Updated");
+            return Ok("Device Updated Successfully");
         }
 
         [HttpDelete("{id}")]
         public IActionResult DeleteDevice(int id)
         {
             _repo.DeleteDevice(id);
-            return Ok("Device Deleted");
+            return Ok("Device Deleted Successfully");
         }
     }
 }
