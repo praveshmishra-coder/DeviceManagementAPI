@@ -1,6 +1,6 @@
 ﻿using DeviceManagementAPI.Models;
 
-namespace DeviceManagementAPI.Data.Interfaces
+namespace DeviceManagementAPI.Services.Interfaces
 {
     public interface IDeviceRepository
     {

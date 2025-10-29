@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using AutoMapper;
-using DeviceManagementAPI.Data.Interfaces;
+using DeviceManagementAPI.Services.Interfaces;
 using DeviceManagementAPI.DTOs;
 using DeviceManagementAPI.Models;
 
@@ -82,7 +82,7 @@ namespace DeviceManagementAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding a new asset.");
-                return StatusCode(500, "An internal server error occurred.");
+                return StatusCode(500, "Cannot add Asset because DeviceId does not exist.");
             }
         }
 

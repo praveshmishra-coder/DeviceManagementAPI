@@ -1,6 +1,7 @@
 using DeviceManagementAPI.Data;
-using DeviceManagementAPI.Data.Interfaces;
-using DeviceManagementAPI.Middlewares; // ? Add this
+using DeviceManagementAPI.Middlewares;
+using DeviceManagementAPI.Services;
+using DeviceManagementAPI.Services.Interfaces; // ? Add this
 
 var builder = WebApplication.CreateBuilder(args);
 // Add AutoMapper

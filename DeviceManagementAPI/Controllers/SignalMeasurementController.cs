@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.DTOs;
 using DeviceManagementAPI.Models;
 using AutoMapper;
+using DeviceManagementAPI.Services.Interfaces;
 
 namespace DeviceManagementAPI.Controllers
 {
@@ -87,7 +87,7 @@ namespace DeviceManagementAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding signal.");
-                return StatusCode(500, "An internal server error occurred.");
+                return StatusCode(500, "Cannot add signal because AssetId does not exist.");
             }
         }
 

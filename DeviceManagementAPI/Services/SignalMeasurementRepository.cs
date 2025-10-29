@@ -1,10 +1,11 @@
-﻿using DeviceManagementAPI.Data.Interfaces;
+﻿using DeviceManagementAPI.Data;
 using DeviceManagementAPI.Models;
+using DeviceManagementAPI.Services.Interfaces;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using System.Data;
 
-namespace DeviceManagementAPI.Data
+namespace DeviceManagementAPI.Services
 {
     public class SignalMeasurementRepository : ISignalMeasurementRepository
     {

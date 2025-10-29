@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using AutoMapper;
-using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.DTOs;
 using DeviceManagementAPI.Models;
+using DeviceManagementAPI.Services.Interfaces;
 
 namespace DeviceManagementAPI.Controllers
 {

@@ -1,10 +1,10 @@
 ﻿using System.Data;
 using Microsoft.Data.SqlClient;
 using DeviceManagementAPI.Models;
-using DeviceManagementAPI.Data.Interfaces;
 using Microsoft.Extensions.Logging;
+using DeviceManagementAPI.Services.Interfaces;
 
-namespace DeviceManagementAPI.Data
+namespace DeviceManagementAPI.Services
 {
     public class AssetRepository : IAssetRepository
     {
