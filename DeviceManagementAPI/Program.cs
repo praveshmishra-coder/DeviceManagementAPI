@@ -1,5 +1,6 @@
 using DeviceManagementAPI.Data;
 using DeviceManagementAPI.Data.Interfaces;
+using DeviceManagementAPI.Middlewares; // ? Add this
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,15 +9,16 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// ? Register DatabaseHelper for ADO.NET connection handling
+// Register DatabaseHelper and Repositories
 builder.Services.AddScoped<DatabaseHelper>();
-
-// ? Register repositories (Dependency Injection)
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IAssetRepository, AssetRepository>();
 builder.Services.AddScoped<ISignalMeasurementRepository, SignalMeasurementRepository>();
 
 var app = builder.Build();
+
+// ? Global error handling middleware
+app.UseGlobalExceptionHandler();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

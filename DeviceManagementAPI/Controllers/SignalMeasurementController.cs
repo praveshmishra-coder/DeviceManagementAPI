@@ -1,59 +1,122 @@
-﻿using DeviceManagementAPI.Data.Interfaces;
+﻿using Microsoft.AspNetCore.Mvc;
+using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.Models;
-using Microsoft.AspNetCore.Mvc;
 
 namespace DeviceManagementAPI.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class SignalMeasurementController : ControllerBase
     {
-        private readonly ISignalMeasurementRepository _repository;
+        private readonly ISignalMeasurementRepository _signalRepository;
+        private readonly ILogger<SignalMeasurementController> _logger;
 
-        public SignalMeasurementController(ISignalMeasurementRepository repository)
+        public SignalMeasurementController(ISignalMeasurementRepository signalRepository, ILogger<SignalMeasurementController> logger)
         {
-            _repository = repository;
+            _signalRepository = signalRepository;
+            _logger = logger;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<ActionResult<IEnumerable<SignalMeasurement>>> GetAllSignals()
         {
-            var signals = await _repository.GetAllSignalsAsync();
-            return Ok(signals);
+            try
+            {
+                var signals = await _signalRepository.GetAllSignalsAsync();
+                return Ok(signals);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving signals.");
+                return StatusCode(500, "An internal server error occurred.");
+            }
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<ActionResult<SignalMeasurement>> GetSignalById(int id)
         {
-            var signal = await _repository.GetSignalByIdAsync(id);
-            if (signal == null)
-                return NotFound();
+            try
+            {
+                var signal = await _signalRepository.GetSignalByIdAsync(id);
+                if (signal == null)
+                {
+                    _logger.LogWarning("Signal with ID {Id} not found.", id);
+                    return NotFound($"Signal with ID {id} not found.");
+                }
 
-            return Ok(signal);
+                return Ok(signal);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving signal with ID {Id}.", id);
+                return StatusCode(500, "An internal server error occurred.");
+            }
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(SignalMeasurement signal)
+        public async Task<ActionResult<SignalMeasurement>> AddSignal([FromBody] SignalMeasurement signal)
         {
-            var newId = await _repository.AddSignalAsync(signal);
-            return CreatedAtAction(nameof(GetById), new { id = newId }, signal);
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var newId = await _signalRepository.AddSignalAsync(signal);
+                signal.SignalId = newId;
+
+                _logger.LogInformation("Signal created with ID {Id}.", newId);
+                return CreatedAtAction(nameof(GetSignalById), new { id = signal.SignalId }, signal);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding signal.");
+                return StatusCode(500, "An internal server error occurred.");
+            }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, SignalMeasurement signal)
+        public async Task<IActionResult> UpdateSignal(int id, [FromBody] SignalMeasurement signal)
         {
-            if (id != signal.SignalId)
-                return BadRequest("Signal ID mismatch.");
+            try
+            {
+                if (id != signal.SignalId)
+                    return BadRequest("Signal ID mismatch.");
 
-            await _repository.UpdateSignalAsync(signal);
-            return NoContent();
+                var existingSignal = await _signalRepository.GetSignalByIdAsync(id);
+                if (existingSignal == null)
+                    return NotFound($"Signal with ID {id} not found.");
+
+                await _signalRepository.UpdateSignalAsync(signal);
+                _logger.LogInformation("Signal with ID {Id} updated successfully.", id);
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating signal with ID {Id}.", id);
+                return StatusCode(500, "An internal server error occurred.");
+            }
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> DeleteSignal(int id)
         {
-            await _repository.DeleteSignalAsync(id);
-            return NoContent();
+            try
+            {
+                var existingSignal = await _signalRepository.GetSignalByIdAsync(id);
+                if (existingSignal == null)
+                    return NotFound($"Signal with ID {id} not found.");
+
+                await _signalRepository.DeleteSignalAsync(id);
+                _logger.LogInformation("Signal with ID {Id} deleted successfully.", id);
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting signal with ID {Id}.", id);
+                return StatusCode(500, "An internal server error occurred.");
+            }
         }
     }
 }
