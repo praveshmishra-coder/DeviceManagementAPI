@@ -3,7 +3,8 @@ using DeviceManagementAPI.Data.Interfaces;
 using DeviceManagementAPI.Middlewares; // ? Add this
 
 var builder = WebApplication.CreateBuilder(args);
-
+// Add AutoMapper
+builder.Services.AddAutoMapper(typeof(Program));
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

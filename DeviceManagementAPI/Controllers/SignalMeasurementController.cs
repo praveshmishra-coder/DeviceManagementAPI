@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using DeviceManagementAPI.Data.Interfaces;
+using DeviceManagementAPI.DTOs;
 using DeviceManagementAPI.Models;
+using AutoMapper;
 
 namespace DeviceManagementAPI.Controllers
 {
@@ -9,21 +11,28 @@ namespace DeviceManagementAPI.Controllers
     public class SignalMeasurementController : ControllerBase
     {
         private readonly ISignalMeasurementRepository _signalRepository;
+        private readonly IMapper _mapper;
         private readonly ILogger<SignalMeasurementController> _logger;
 
-        public SignalMeasurementController(ISignalMeasurementRepository signalRepository, ILogger<SignalMeasurementController> logger)
+        public SignalMeasurementController(
+            ISignalMeasurementRepository signalRepository,
+            IMapper mapper,
+            ILogger<SignalMeasurementController> logger)
         {
             _signalRepository = signalRepository;
+            _mapper = mapper;
             _logger = logger;
         }
 
+        // ✅ GET: api/signalmeasurement
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SignalMeasurement>>> GetAllSignals()
+        public async Task<ActionResult<IEnumerable<SignalMeasurementResponseDTO>>> GetAllSignals()
         {
             try
             {
                 var signals = await _signalRepository.GetAllSignalsAsync();
-                return Ok(signals);
+                var response = _mapper.Map<IEnumerable<SignalMeasurementResponseDTO>>(signals);
+                return Ok(response);
             }
             catch (Exception ex)
             {
@@ -32,8 +41,9 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ GET: api/signalmeasurement/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<SignalMeasurement>> GetSignalById(int id)
+        public async Task<ActionResult<SignalMeasurementResponseDTO>> GetSignalById(int id)
         {
             try
             {
@@ -44,7 +54,8 @@ namespace DeviceManagementAPI.Controllers
                     return NotFound($"Signal with ID {id} not found.");
                 }
 
-                return Ok(signal);
+                var response = _mapper.Map<SignalMeasurementResponseDTO>(signal);
+                return Ok(response);
             }
             catch (Exception ex)
             {
@@ -53,19 +64,25 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ POST: api/signalmeasurement
         [HttpPost]
-        public async Task<ActionResult<SignalMeasurement>> AddSignal([FromBody] SignalMeasurement signal)
+        public async Task<ActionResult<SignalMeasurementResponseDTO>> AddSignal([FromBody] SignalMeasurementRequestDTO request)
         {
             try
             {
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
+                // Map DTO to entity
+                var signal = _mapper.Map<SignalMeasurement>(request);
+
                 var newId = await _signalRepository.AddSignalAsync(signal);
                 signal.SignalId = newId;
 
+                var response = _mapper.Map<SignalMeasurementResponseDTO>(signal);
+
                 _logger.LogInformation("Signal created with ID {Id}.", newId);
-                return CreatedAtAction(nameof(GetSignalById), new { id = signal.SignalId }, signal);
+                return CreatedAtAction(nameof(GetSignalById), new { id = response.SignalId }, response);
             }
             catch (Exception ex)
             {
@@ -74,19 +91,23 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ PUT: api/signalmeasurement/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSignal(int id, [FromBody] SignalMeasurement signal)
+        public async Task<IActionResult> UpdateSignal(int id, [FromBody] SignalMeasurementRequestDTO request)
         {
             try
             {
-                if (id != signal.SignalId)
-                    return BadRequest("Signal ID mismatch.");
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
                 var existingSignal = await _signalRepository.GetSignalByIdAsync(id);
                 if (existingSignal == null)
                     return NotFound($"Signal with ID {id} not found.");
 
-                await _signalRepository.UpdateSignalAsync(signal);
+                // Map updated fields from DTO
+                _mapper.Map(request, existingSignal);
+
+                await _signalRepository.UpdateSignalAsync(existingSignal);
                 _logger.LogInformation("Signal with ID {Id} updated successfully.", id);
 
                 return NoContent();
@@ -98,6 +119,7 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ DELETE: api/signalmeasurement/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSignal(int id)
         {

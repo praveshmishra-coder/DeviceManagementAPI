@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using AutoMapper;
 using DeviceManagementAPI.Data.Interfaces;
+using DeviceManagementAPI.DTOs;
 using DeviceManagementAPI.Models;
 
 namespace DeviceManagementAPI.Controllers
@@ -9,21 +11,25 @@ namespace DeviceManagementAPI.Controllers
     public class DeviceController : ControllerBase
     {
         private readonly IDeviceRepository _deviceRepository;
+        private readonly IMapper _mapper;
         private readonly ILogger<DeviceController> _logger;
 
-        public DeviceController(IDeviceRepository deviceRepository, ILogger<DeviceController> logger)
+        public DeviceController(IDeviceRepository deviceRepository, IMapper mapper, ILogger<DeviceController> logger)
         {
             _deviceRepository = deviceRepository;
+            _mapper = mapper;
             _logger = logger;
         }
 
+        // ✅ GET: api/device
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Device>>> GetAllDevices()
+        public async Task<ActionResult<IEnumerable<DeviceResponseDTO>>> GetAllDevices()
         {
             try
             {
                 var devices = await _deviceRepository.GetAllDevicesAsync();
-                return Ok(devices);
+                var deviceDtos = _mapper.Map<IEnumerable<DeviceResponseDTO>>(devices);
+                return Ok(deviceDtos);
             }
             catch (Exception ex)
             {
@@ -32,8 +38,9 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ GET: api/device/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Device>> GetDeviceById(int id)
+        public async Task<ActionResult<DeviceResponseDTO>> GetDeviceById(int id)
         {
             try
             {
@@ -44,7 +51,8 @@ namespace DeviceManagementAPI.Controllers
                     return NotFound($"Device with ID {id} not found.");
                 }
 
-                return Ok(device);
+                var deviceDto = _mapper.Map<DeviceResponseDTO>(device);
+                return Ok(deviceDto);
             }
             catch (Exception ex)
             {
@@ -53,19 +61,23 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ POST: api/device
         [HttpPost]
-        public async Task<ActionResult<Device>> AddDevice([FromBody] Device device)
+        public async Task<ActionResult<DeviceResponseDTO>> AddDevice([FromBody] DeviceRequestDTO deviceDto)
         {
             try
             {
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
+                var device = _mapper.Map<Device>(deviceDto);
                 var newId = await _deviceRepository.AddDeviceAsync(device);
+
                 device.DeviceId = newId;
+                var response = _mapper.Map<DeviceResponseDTO>(device);
 
                 _logger.LogInformation("Device created with ID {Id}.", newId);
-                return CreatedAtAction(nameof(GetDeviceById), new { id = device.DeviceId }, device);
+                return CreatedAtAction(nameof(GetDeviceById), new { id = response.DeviceId }, response);
             }
             catch (Exception ex)
             {
@@ -74,21 +86,27 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ PUT: api/device/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateDevice(int id, [FromBody] Device device)
+        public async Task<IActionResult> UpdateDevice(int id, [FromBody] DeviceRequestDTO deviceDto)
         {
             try
             {
-                if (id != device.DeviceId)
-                    return BadRequest("Device ID mismatch.");
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
                 var existingDevice = await _deviceRepository.GetDeviceByIdAsync(id);
                 if (existingDevice == null)
+                {
+                    _logger.LogWarning("Device with ID {Id} not found for update.", id);
                     return NotFound($"Device with ID {id} not found.");
+                }
 
-                await _deviceRepository.UpdateDeviceAsync(device);
+                // Map DTO onto existing entity
+                _mapper.Map(deviceDto, existingDevice);
+                await _deviceRepository.UpdateDeviceAsync(existingDevice);
+
                 _logger.LogInformation("Device with ID {Id} updated successfully.", id);
-
                 return NoContent();
             }
             catch (Exception ex)
@@ -98,6 +116,7 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ DELETE: api/device/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDevice(int id)
         {
@@ -105,7 +124,10 @@ namespace DeviceManagementAPI.Controllers
             {
                 var existingDevice = await _deviceRepository.GetDeviceByIdAsync(id);
                 if (existingDevice == null)
+                {
+                    _logger.LogWarning("Device with ID {Id} not found for deletion.", id);
                     return NotFound($"Device with ID {id} not found.");
+                }
 
                 await _deviceRepository.DeleteDeviceAsync(id);
                 _logger.LogInformation("Device with ID {Id} deleted successfully.", id);

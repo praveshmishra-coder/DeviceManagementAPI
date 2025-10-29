@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using AutoMapper;
 using DeviceManagementAPI.Data.Interfaces;
+using DeviceManagementAPI.DTOs;
 using DeviceManagementAPI.Models;
 
 namespace DeviceManagementAPI.Controllers
@@ -9,21 +11,25 @@ namespace DeviceManagementAPI.Controllers
     public class AssetController : ControllerBase
     {
         private readonly IAssetRepository _assetRepository;
+        private readonly IMapper _mapper;
         private readonly ILogger<AssetController> _logger;
 
-        public AssetController(IAssetRepository assetRepository, ILogger<AssetController> logger)
+        public AssetController(IAssetRepository assetRepository, IMapper mapper, ILogger<AssetController> logger)
         {
             _assetRepository = assetRepository;
+            _mapper = mapper;
             _logger = logger;
         }
 
+        // ✅ GET: api/asset
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Asset>>> GetAllAssets()
+        public async Task<ActionResult<IEnumerable<AssetResponseDTO>>> GetAllAssets()
         {
             try
             {
                 var assets = await _assetRepository.GetAllAssetsAsync();
-                return Ok(assets);
+                var assetDtos = _mapper.Map<IEnumerable<AssetResponseDTO>>(assets);
+                return Ok(assetDtos);
             }
             catch (Exception ex)
             {
@@ -32,8 +38,9 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ GET: api/asset/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Asset>> GetAssetById(int id)
+        public async Task<ActionResult<AssetResponseDTO>> GetAssetById(int id)
         {
             try
             {
@@ -44,7 +51,8 @@ namespace DeviceManagementAPI.Controllers
                     return NotFound($"Asset with ID {id} not found.");
                 }
 
-                return Ok(asset);
+                var assetDto = _mapper.Map<AssetResponseDTO>(asset);
+                return Ok(assetDto);
             }
             catch (Exception ex)
             {
@@ -53,19 +61,23 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ POST: api/asset
         [HttpPost]
-        public async Task<ActionResult<Asset>> AddAsset([FromBody] Asset asset)
+        public async Task<ActionResult<AssetResponseDTO>> AddAsset([FromBody] AssetRequestDTO assetDto)
         {
             try
             {
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
+                var asset = _mapper.Map<Asset>(assetDto);
                 var newId = await _assetRepository.AddAssetAsync(asset);
+
                 asset.AssetId = newId;
+                var response = _mapper.Map<AssetResponseDTO>(asset);
 
                 _logger.LogInformation("Asset created with ID {Id}.", newId);
-                return CreatedAtAction(nameof(GetAssetById), new { id = asset.AssetId }, asset);
+                return CreatedAtAction(nameof(GetAssetById), new { id = response.AssetId }, response);
             }
             catch (Exception ex)
             {
@@ -74,21 +86,27 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ PUT: api/asset/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAsset(int id, [FromBody] Asset asset)
+        public async Task<IActionResult> UpdateAsset(int id, [FromBody] AssetRequestDTO assetDto)
         {
             try
             {
-                if (id != asset.AssetId)
-                    return BadRequest("Asset ID mismatch.");
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
                 var existingAsset = await _assetRepository.GetAssetByIdAsync(id);
                 if (existingAsset == null)
+                {
+                    _logger.LogWarning("Asset with ID {Id} not found for update.", id);
                     return NotFound($"Asset with ID {id} not found.");
+                }
 
-                await _assetRepository.UpdateAssetAsync(asset);
+                // Map changes from DTO → entity
+                _mapper.Map(assetDto, existingAsset);
+                await _assetRepository.UpdateAssetAsync(existingAsset);
+
                 _logger.LogInformation("Asset with ID {Id} updated successfully.", id);
-
                 return NoContent();
             }
             catch (Exception ex)
@@ -98,6 +116,7 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
+        // ✅ DELETE: api/asset/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsset(int id)
         {
@@ -105,7 +124,10 @@ namespace DeviceManagementAPI.Controllers
             {
                 var existingAsset = await _assetRepository.GetAssetByIdAsync(id);
                 if (existingAsset == null)
+                {
+                    _logger.LogWarning("Asset with ID {Id} not found for deletion.", id);
                     return NotFound($"Asset with ID {id} not found.");
+                }
 
                 await _assetRepository.DeleteAssetAsync(id);
                 _logger.LogInformation("Asset with ID {Id} deleted successfully.", id);
