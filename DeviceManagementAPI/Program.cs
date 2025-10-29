@@ -1,17 +1,36 @@
 using DeviceManagementAPI.Data;
 using DeviceManagementAPI.Middlewares;
 using DeviceManagementAPI.Services;
-using DeviceManagementAPI.Services.Interfaces; // ? Add this
+using DeviceManagementAPI.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
-// Add AutoMapper
+
+// ? Configure Logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+// ? Add AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
-// Add services to the container
+
+// ? Add Controllers, Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register DatabaseHelper and Repositories
+// ? Enable CORS for React App (localhost:5173)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173") // React dev server
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // if you send cookies or tokens
+    });
+});
+
+// ? Register DatabaseHelper and Repositories
 builder.Services.AddScoped<DatabaseHelper>();
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IAssetRepository, AssetRepository>();
@@ -19,17 +38,22 @@ builder.Services.AddScoped<ISignalMeasurementRepository, SignalMeasurementReposi
 
 var app = builder.Build();
 
-// ? Global error handling middleware
+// ? Global Error Handling Middleware
 app.UseGlobalExceptionHandler();
 
-// Configure the HTTP request pipeline
+// ? Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// ? Use CORS before routing and endpoints
+app.UseCors("AllowReactApp");
+
 app.UseHttpsRedirection();
+
+app.UseAuthorization();
 
 app.MapControllers();
 
