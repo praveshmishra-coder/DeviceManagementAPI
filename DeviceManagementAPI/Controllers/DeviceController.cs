@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using AutoMapper;
+﻿using AutoMapper;
 using DeviceManagementAPI.DTOs;
 using DeviceManagementAPI.Models;
 using DeviceManagementAPI.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DeviceManagementAPI.Controllers
 {
@@ -28,13 +28,13 @@ namespace DeviceManagementAPI.Controllers
             try
             {
                 var devices = await _deviceRepository.GetAllDevicesAsync();
-                var deviceDtos = _mapper.Map<IEnumerable<DeviceResponseDTO>>(devices);
-                return Ok(deviceDtos);
+                var response = _mapper.Map<IEnumerable<DeviceResponseDTO>>(devices);
+                return Ok(response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving all devices.");
-                return StatusCode(500, "An internal server error occurred.");
+                _logger.LogError(ex, "Error fetching devices.");
+                return StatusCode(500, "An error occurred while retrieving devices.");
             }
         }
 
@@ -51,68 +51,57 @@ namespace DeviceManagementAPI.Controllers
                     return NotFound($"Device with ID {id} not found.");
                 }
 
-                var deviceDto = _mapper.Map<DeviceResponseDTO>(device);
-                return Ok(deviceDto);
+                var response = _mapper.Map<DeviceResponseDTO>(device);
+                return Ok(response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving device with ID {Id}.", id);
-                return StatusCode(500, "An internal server error occurred.");
+                _logger.LogError(ex, "Error fetching device with ID {DeviceId}", id);
+                return StatusCode(500, "An error occurred while retrieving the device.");
             }
         }
 
         // ✅ POST: api/device
         [HttpPost]
-        public async Task<ActionResult<DeviceResponseDTO>> AddDevice([FromBody] DeviceRequestDTO deviceDto)
+        public async Task<ActionResult<DeviceResponseDTO>> AddDevice(DeviceRequestDTO deviceDto)
         {
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
                 var device = _mapper.Map<Device>(deviceDto);
                 var newId = await _deviceRepository.AddDeviceAsync(device);
 
-                device.DeviceId = newId;
-                var response = _mapper.Map<DeviceResponseDTO>(device);
+                var createdDevice = await _deviceRepository.GetDeviceByIdAsync(newId);
+                var response = _mapper.Map<DeviceResponseDTO>(createdDevice);
 
-                _logger.LogInformation("Device created with ID {Id}.", newId);
-                return CreatedAtAction(nameof(GetDeviceById), new { id = response.DeviceId }, response);
+                return CreatedAtAction(nameof(GetDeviceById), new { id = newId }, response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding a new device.");
-                return StatusCode(500, "An internal server error occurred.");
+                _logger.LogError(ex, "Error adding new device.");
+                return StatusCode(500, "An error occurred while adding the device.");
             }
         }
 
         // ✅ PUT: api/device/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateDevice(int id, [FromBody] DeviceRequestDTO deviceDto)
+        public async Task<IActionResult> UpdateDevice(int id, DeviceRequestDTO deviceDto)
         {
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
                 var existingDevice = await _deviceRepository.GetDeviceByIdAsync(id);
                 if (existingDevice == null)
-                {
-                    _logger.LogWarning("Device with ID {Id} not found for update.", id);
                     return NotFound($"Device with ID {id} not found.");
-                }
 
-                // Map DTO onto existing entity
-                _mapper.Map(deviceDto, existingDevice);
+                _mapper.Map(deviceDto, existingDevice); // ✅ Copy DTO → Model
+                existingDevice.DeviceId = id;
+
                 await _deviceRepository.UpdateDeviceAsync(existingDevice);
-
-                _logger.LogInformation("Device with ID {Id} updated successfully.", id);
                 return NoContent();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating device with ID {Id}.", id);
-                return StatusCode(500, "An internal server error occurred.");
+                _logger.LogError(ex, "Error updating device with ID {DeviceId}", id);
+                return StatusCode(500, "An error occurred while updating the device.");
             }
         }
 
@@ -124,20 +113,15 @@ namespace DeviceManagementAPI.Controllers
             {
                 var existingDevice = await _deviceRepository.GetDeviceByIdAsync(id);
                 if (existingDevice == null)
-                {
-                    _logger.LogWarning("Device with ID {Id} not found for deletion.", id);
                     return NotFound($"Device with ID {id} not found.");
-                }
 
                 await _deviceRepository.DeleteDeviceAsync(id);
-                _logger.LogInformation("Device with ID {Id} deleted successfully.", id);
-
                 return NoContent();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting device with ID {Id}.", id);
-                return StatusCode(500, "An internal server error occurred.");
+                _logger.LogError(ex, "Error deleting device with ID {DeviceId}", id);
+                return StatusCode(500, "An error occurred while deleting the device.");
             }
         }
     }

@@ -1,6 +1,6 @@
 ﻿using DeviceManagementAPI.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Collections.Generic; //provides IEnumerable<T> (for lists/collections).
+using System.Threading.Tasks;     //allows asynchronous operations using Task.
 
 namespace DeviceManagementAPI.Services.Interfaces
 {
