@@ -14,8 +14,8 @@ namespace DeviceManagementAPI.Services
 
         public SignalMeasurementRepository(DatabaseHelper db, ILogger<SignalMeasurementRepository> logger)
         {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _db = db;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<SignalMeasurement>> GetAllSignalsAsync()

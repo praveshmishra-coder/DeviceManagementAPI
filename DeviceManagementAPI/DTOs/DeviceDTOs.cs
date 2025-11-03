@@ -2,7 +2,7 @@
 
 namespace DeviceManagementAPI.DTOs
 {
-    // ✅ Response DTO (used when sending data to clients)
+    //  sending data to clients
     public class DeviceResponseDTO
     {
         public int DeviceId { get; set; }
@@ -12,7 +12,7 @@ namespace DeviceManagementAPI.DTOs
         public string? Description { get; set; }
     }
 
-    // ✅ Request DTO (used when creating or updating a device)
+    //  Request DTO 
     public class DeviceRequestDTO
     {
         [Required(ErrorMessage = "Device name is required.")]

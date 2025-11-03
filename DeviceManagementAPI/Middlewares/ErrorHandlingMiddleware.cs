@@ -19,13 +19,13 @@ namespace DeviceManagementAPI.Middlewares
         {
             try
             {
-                // 🟢 Log basic request info
+                // Log
                 _logger.LogInformation("➡️ {Method} {Path}", context.Request.Method, context.Request.Path);
 
-                // 🟡 Log request body for POST/PUT/PATCH
+                
                 if (context.Request.Method is "POST" or "PUT" or "PATCH")
                 {
-                    context.Request.EnableBuffering(); // allows re-reading the body
+                    context.Request.EnableBuffering(); 
                     using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, leaveOpen: true);
                     var body = await reader.ReadToEndAsync();
                     context.Request.Body.Position = 0;
@@ -36,9 +36,9 @@ namespace DeviceManagementAPI.Middlewares
                         _logger.LogInformation("📦 Request Body: (empty)");
                 }
 
-                await _next(context); // continue the pipeline
+                await _next(context); 
 
-                // 🟢 Log response status
+                
                 _logger.LogInformation("⬅️ Response Status: {StatusCode}", context.Response.StatusCode);
             }
             catch (Exception ex)
@@ -54,7 +54,7 @@ namespace DeviceManagementAPI.Middlewares
                     error = new
                     {
                         message = "An unexpected error occurred. Please try again later.",
-                        detail = ex.Message // ⚠️ Remove in production for security
+                        detail = ex.Message 
                     }
                 };
 
@@ -68,7 +68,7 @@ namespace DeviceManagementAPI.Middlewares
         }
     }
 
-    // ✅ Extension method for cleaner Program.cs registration
+    
     public static class ErrorHandlingMiddlewareExtensions
     {
         public static IApplicationBuilder UseGlobalExceptionHandler(this IApplicationBuilder app)

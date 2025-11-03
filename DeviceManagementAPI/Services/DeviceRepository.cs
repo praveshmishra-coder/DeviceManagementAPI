@@ -18,7 +18,7 @@ namespace DeviceManagementAPI.Services
             _logger = logger;
         }
 
-        // ✅ GET all devices
+        //GET
         public async Task<IEnumerable<Device>> GetAllDevicesAsync()
         {
             var devices = new List<Device>();
@@ -51,7 +51,7 @@ namespace DeviceManagementAPI.Services
             return devices;
         }
 
-        // ✅ GET device by ID
+        //GET device by ID
         public async Task<Device?> GetDeviceByIdAsync(int deviceId)
         {
             try
@@ -83,7 +83,7 @@ namespace DeviceManagementAPI.Services
             }
         }
 
-        // ✅ ADD new device
+        //ADD
         public async Task<int> AddDeviceAsync(Device device)
         {
             try
@@ -112,7 +112,7 @@ namespace DeviceManagementAPI.Services
             }
         }
 
-        // ✅ UPDATE existing device
+        // UPDATE
         public async Task UpdateDeviceAsync(Device device)
         {
             try
@@ -141,7 +141,7 @@ namespace DeviceManagementAPI.Services
             }
         }
 
-        // ✅ DELETE device
+        // DELETE
         public async Task DeleteDeviceAsync(int deviceId)
         {
             try

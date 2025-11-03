@@ -21,7 +21,7 @@ namespace DeviceManagementAPI.Controllers
             _logger = logger;
         }
 
-        // ✅ GET: api/device
+        //GET
         [HttpGet]
         public async Task<ActionResult<IEnumerable<DeviceResponseDTO>>> GetAllDevices()
         {
@@ -38,7 +38,7 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
-        // ✅ GET: api/device/{id}
+        //GET BY ID
         [HttpGet("{id}")]
         public async Task<ActionResult<DeviceResponseDTO>> GetDeviceById(int id)
         {
@@ -61,7 +61,7 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
-        // ✅ POST: api/device
+        // POST
         [HttpPost]
         public async Task<ActionResult<DeviceResponseDTO>> AddDevice(DeviceRequestDTO deviceDto)
         {
@@ -82,7 +82,7 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
-        // ✅ PUT: api/device/{id}
+        // PUT
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateDevice(int id, DeviceRequestDTO deviceDto)
         {
@@ -105,7 +105,7 @@ namespace DeviceManagementAPI.Controllers
             }
         }
 
-        // ✅ DELETE: api/device/{id}
+        // DELETE
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDevice(int id)
         {
