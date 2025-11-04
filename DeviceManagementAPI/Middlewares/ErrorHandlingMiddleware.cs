@@ -20,7 +20,7 @@ namespace DeviceManagementAPI.Middlewares
             try
             {
                 // Log
-                _logger.LogInformation("➡️ {Method} {Path}", context.Request.Method, context.Request.Path);
+                _logger.LogInformation("{Method} {Path}", context.Request.Method, context.Request.Path);
 
                 
                 if (context.Request.Method is "POST" or "PUT" or "PATCH")
@@ -31,19 +31,19 @@ namespace DeviceManagementAPI.Middlewares
                     context.Request.Body.Position = 0;
 
                     if (!string.IsNullOrWhiteSpace(body))
-                        _logger.LogInformation("📦 Request Body: {Body}", body);
+                        _logger.LogInformation("Request Body: {Body}", body);
                     else
-                        _logger.LogInformation("📦 Request Body: (empty)");
+                        _logger.LogInformation("Request Body: (empty)");
                 }
 
                 await _next(context); 
 
                 
-                _logger.LogInformation("⬅️ Response Status: {StatusCode}", context.Response.StatusCode);
+                _logger.LogInformation("Response Status: {StatusCode}", context.Response.StatusCode);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Unhandled exception occurred while processing the request.");
+                _logger.LogError(ex, "Unhandled exception occurred while processing the request.");
 
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 context.Response.ContentType = "application/json";

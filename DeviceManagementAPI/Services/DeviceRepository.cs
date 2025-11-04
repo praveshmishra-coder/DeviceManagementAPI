@@ -1,5 +1,4 @@
-﻿using DeviceManagementAPI.Data;
-using DeviceManagementAPI.Models;
+﻿using DeviceManagementAPI.Models;
 using DeviceManagementAPI.Services.Interfaces;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -9,27 +8,27 @@ namespace DeviceManagementAPI.Services
 {
     public class DeviceRepository : IDeviceRepository
     {
-        private readonly DatabaseHelper _db;
+        private readonly SqlConnection _connection;
         private readonly ILogger<DeviceRepository> _logger;
 
-        public DeviceRepository(DatabaseHelper db, ILogger<DeviceRepository> logger)
+        public DeviceRepository(SqlConnection connection, ILogger<DeviceRepository> logger)
         {
-            _db = db;
+            _connection = connection;
             _logger = logger;
         }
 
-        //GET
+        // GET ALL DEVICES
         public async Task<IEnumerable<Device>> GetAllDevicesAsync()
         {
             var devices = new List<Device>();
 
             try
             {
-                await using var connection = _db.GetConnection();
-                await connection.OpenAsync();
+                if (_connection.State == ConnectionState.Closed)
+                    await _connection.OpenAsync();
 
                 const string query = "SELECT DeviceId, DeviceName, Description FROM Devices";
-                await using var command = new SqlCommand(query, connection);
+                await using var command = new SqlCommand(query, _connection);
 
                 await using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -47,21 +46,25 @@ namespace DeviceManagementAPI.Services
                 _logger.LogError(ex, "Error retrieving all devices from database.");
                 throw;
             }
+            finally
+            {
+                await _connection.CloseAsync();
+            }
 
             return devices;
         }
 
-        //GET device by ID
+        // GET DEVICE BY ID
         public async Task<Device?> GetDeviceByIdAsync(int deviceId)
         {
             try
             {
-                await using var connection = _db.GetConnection();
-                await connection.OpenAsync();
+                if (_connection.State == ConnectionState.Closed)
+                    await _connection.OpenAsync();
 
                 const string query = "SELECT DeviceId, DeviceName, Description FROM Devices WHERE DeviceId = @DeviceId";
-                await using var command = new SqlCommand(query, connection);
-                command.Parameters.Add("@DeviceId", SqlDbType.Int).Value = deviceId;
+                await using var command = new SqlCommand(query, _connection);
+                command.Parameters.AddWithValue("@DeviceId", deviceId);
 
                 await using var reader = await command.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -81,26 +84,28 @@ namespace DeviceManagementAPI.Services
                 _logger.LogError(ex, "Error fetching device with ID {DeviceId}", deviceId);
                 throw;
             }
+            finally
+            {
+                await _connection.CloseAsync();
+            }
         }
 
-        //ADD
+        // ADD DEVICE
         public async Task<int> AddDeviceAsync(Device device)
         {
             try
             {
-                await using var connection = _db.GetConnection();
-                await connection.OpenAsync();
+                if (_connection.State == ConnectionState.Closed)
+                    await _connection.OpenAsync();
 
                 const string query = @"
                     INSERT INTO Devices (DeviceName, Description)
                     VALUES (@DeviceName, @Description);
                     SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
-                await using var command = new SqlCommand(query, connection);
-                command.Parameters.Add("@DeviceName", SqlDbType.NVarChar, 200).Value =
-                    device.DeviceName ?? (object)DBNull.Value;
-                command.Parameters.Add("@Description", SqlDbType.NVarChar, 500).Value =
-                    device.Description ?? (object)DBNull.Value;
+                await using var command = new SqlCommand(query, _connection);
+                command.Parameters.AddWithValue("@DeviceName", device.DeviceName ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Description", device.Description ?? (object)DBNull.Value);
 
                 var newId = await command.ExecuteScalarAsync();
                 return Convert.ToInt32(newId);
@@ -110,27 +115,29 @@ namespace DeviceManagementAPI.Services
                 _logger.LogError(ex, "Error adding new device: {DeviceName}", device.DeviceName);
                 throw;
             }
+            finally
+            {
+                await _connection.CloseAsync();
+            }
         }
 
-        // UPDATE
+        // UPDATE DEVICE
         public async Task UpdateDeviceAsync(Device device)
         {
             try
             {
-                await using var connection = _db.GetConnection();
-                await connection.OpenAsync();
+                if (_connection.State == ConnectionState.Closed)
+                    await _connection.OpenAsync();
 
                 const string query = @"
                     UPDATE Devices
                     SET DeviceName = @DeviceName, Description = @Description
                     WHERE DeviceId = @DeviceId";
 
-                await using var command = new SqlCommand(query, connection);
-                command.Parameters.Add("@DeviceName", SqlDbType.NVarChar, 200).Value =
-                    device.DeviceName ?? (object)DBNull.Value;
-                command.Parameters.Add("@Description", SqlDbType.NVarChar, 500).Value =
-                    device.Description ?? (object)DBNull.Value;
-                command.Parameters.Add("@DeviceId", SqlDbType.Int).Value = device.DeviceId;
+                await using var command = new SqlCommand(query, _connection);
+                command.Parameters.AddWithValue("@DeviceName", device.DeviceName ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Description", device.Description ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@DeviceId", device.DeviceId);
 
                 await command.ExecuteNonQueryAsync();
             }
@@ -139,19 +146,23 @@ namespace DeviceManagementAPI.Services
                 _logger.LogError(ex, "Error updating device with ID {DeviceId}", device.DeviceId);
                 throw;
             }
+            finally
+            {
+                await _connection.CloseAsync();
+            }
         }
 
-        // DELETE
+        // DELETE DEVICE
         public async Task DeleteDeviceAsync(int deviceId)
         {
             try
             {
-                await using var connection = _db.GetConnection();
-                await connection.OpenAsync();
+                if (_connection.State == ConnectionState.Closed)
+                    await _connection.OpenAsync();
 
                 const string query = "DELETE FROM Devices WHERE DeviceId = @DeviceId";
-                await using var command = new SqlCommand(query, connection);
-                command.Parameters.Add("@DeviceId", SqlDbType.Int).Value = deviceId;
+                await using var command = new SqlCommand(query, _connection);
+                command.Parameters.AddWithValue("@DeviceId", deviceId);
 
                 await command.ExecuteNonQueryAsync();
             }
@@ -159,6 +170,10 @@ namespace DeviceManagementAPI.Services
             {
                 _logger.LogError(ex, "Error deleting device with ID {DeviceId}", deviceId);
                 throw;
+            }
+            finally
+            {
+                await _connection.CloseAsync();
             }
         }
     }

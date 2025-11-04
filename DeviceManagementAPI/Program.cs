@@ -1,4 +1,4 @@
-using DeviceManagementAPI.Data;
+using Microsoft.Data.SqlClient;
 using DeviceManagementAPI.Middlewares;
 using DeviceManagementAPI.Services;
 using DeviceManagementAPI.Services.Interfaces;
@@ -28,8 +28,13 @@ builder.Services.AddCors(options =>
     });
 });
 
-//  Register DatabaseHelper and Repositories ( Dependency)
-builder.Services.AddScoped<DatabaseHelper>();
+// Get connection string from appsettings.json
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Register SqlConnection as Scoped (one per HTTP request)
+builder.Services.AddScoped((sp) => new SqlConnection(connectionString));
+
+//  Register Repositories ( Dependency)
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IAssetRepository, AssetRepository>();
 builder.Services.AddScoped<ISignalMeasurementRepository, SignalMeasurementRepository>();
